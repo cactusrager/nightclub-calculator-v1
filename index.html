@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nightclub Calculator</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #080b10;
+      --surface:   #0e1420;
+      --border:    #1c2540;
+      --accent:    #00f5c4;
+      --accent2:   #ff3f7a;
+      --accent3:   #7b5cff;
+      --text:      #c8d6e5;
+      --muted:     #4a5878;
+      --gold:      #f5c842;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── noise overlay ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── header ── */
+    .header {
+      padding: 2.5rem 2rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .header h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.2rem, 5vw, 3.6rem);
+      letter-spacing: 0.12em;
+      color: #fff;
+      line-height: 1;
+    }
+    .header h1 span { color: var(--accent); }
+    .header p {
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-top: 0.4rem;
+    }
+
+    /* ── objective strip ── */
+    .objective-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 1.25rem 2rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .obj-card {
+      display: flex; flex-direction: column;
+      gap: 0.15rem;
+      padding: 0.55rem 1.1rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      min-width: 160px;
+    }
+    .obj-card .label {
+      font-size: 0.6rem; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .obj-card .value {
+      font-size: 1.25rem; font-weight: 500;
+      color: #fff;
+    }
+    .obj-card.accent  { border-color: var(--accent);  }
+    .obj-card.accent  .value { color: var(--accent); }
+    .obj-card.accent2 { border-color: var(--accent2); }
+    .obj-card.accent2 .value { color: var(--accent2); }
+    .obj-card.gold    { border-color: var(--gold);    }
+    .obj-card.gold    .value { color: var(--gold);    }
+
+    /* ── progress bar ── */
+    .progress-wrap {
+      padding: 0.8rem 2rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .progress-label {
+      display: flex; justify-content: space-between;
+      font-size: 0.63rem; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 0.45rem;
+    }
+    .prog-bar-track {
+      height: 6px; background: var(--border); border-radius: 99px; overflow: hidden;
+    }
+    .prog-bar-fill {
+      height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, var(--accent3), var(--accent));
+      transition: width 0.5s ease;
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    /* ── input area ── */
+    .completed-input-row {
+      display: flex; flex-wrap: wrap;
+      align-items: center; gap: 1rem;
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .completed-input-row label {
+      font-size: 0.62rem; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--muted);
+      white-space: nowrap;
+    }
+    .completed-input-row input {
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      color: var(--accent);
+      font-family: 'DM Mono', monospace;
+      font-size: 1.05rem;
+      font-weight: 500;
+      padding: 0.45rem 0.9rem;
+      width: 210px;
+      outline: none;
+      transition: box-shadow 0.2s;
+    }
+    .completed-input-row input:focus {
+      box-shadow: 0 0 0 2px rgba(0,245,196,0.25);
+    }
+    .completed-input-row input::placeholder { color: var(--muted); }
+    .hint {
+      font-size: 0.6rem; color: var(--muted); letter-spacing: 0.1em;
+    }
+
+    /* ── tables ── */
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.1rem; letter-spacing: 0.2em;
+      color: var(--muted);
+      padding: 1.5rem 2rem 0.5rem;
+      border-top: 1px solid var(--border);
+    }
+    .section-title span { color: var(--accent3); }
+
+    .table-wrap { padding: 0 1rem 1.5rem; overflow-x: auto; }
+
+    table {
+      width: 100%; border-collapse: collapse;
+      font-size: 0.76rem;
+    }
+    thead th {
+      font-size: 0.58rem; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      padding: 0.55rem 0.9rem; text-align: right;
+      white-space: nowrap;
+    }
+    thead th:first-child { text-align: left; }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(28,37,64,0.6);
+      transition: background 0.15s;
+    }
+    tbody tr:hover { background: rgba(255,255,255,0.025); }
+
+    td {
+      padding: 0.65rem 0.9rem; text-align: right;
+      vertical-align: middle; white-space: nowrap;
+    }
+    td:first-child {
+      text-align: left; color: #fff;
+      font-weight: 500; letter-spacing: 0.04em;
+    }
+
+    .combo-row { background: rgba(123,92,255,0.06); }
+    .combo-row td:first-child { color: var(--accent3); }
+
+    .highlight-row { background: rgba(0,245,196,0.05); }
+    .highlight-row td:first-child { color: var(--accent); }
+
+    .num { font-variant-numeric: tabular-nums; }
+    .dim { color: var(--muted); }
+    .pct { color: var(--accent2); }
+    .days-val { color: var(--gold); }
+
+    /* ── divider ── */
+    .sec-divider { border-color: var(--border); margin: 0; }
+
+    /* ── footer ── */
+    footer {
+      padding: 1.2rem 2rem;
+      font-size: 0.58rem; color: var(--muted);
+      letter-spacing: 0.14em; text-transform: uppercase;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 600px) {
+      .header, .objective-strip, .completed-input-row,
+      .progress-wrap, .section-title { padding-left: 1rem; padding-right: 1rem; }
+      .table-wrap { padding: 0 0 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <h1>DELIVERY<span>&nbsp;CALCULATOR</span></h1>
+  <p>Progress tracker &mdash; objective analysis</p>
+</div>
+
+<!-- OBJECTIVE STRIP -->
+<div class="objective-strip">
+  <div class="obj-card gold">
+    <span class="label">Objective</span>
+    <span class="value" id="disp-objective">$50,000,000</span>
+  </div>
+  <div class="obj-card accent">
+    <span class="label">Completed</span>
+    <span class="value" id="disp-completed">—</span>
+  </div>
+  <div class="obj-card accent2">
+    <span class="label">Remaining</span>
+    <span class="value" id="disp-remaining">—</span>
+  </div>
+  <div class="obj-card">
+    <span class="label">Progress</span>
+    <span class="value" id="disp-pct">—</span>
+  </div>
+</div>
+
+<!-- PROGRESS BAR -->
+<div class="progress-wrap">
+  <div class="progress-label">
+    <span>0</span><span id="prog-label">0%</span><span id="prog-obj">$50,000,000</span>
+  </div>
+  <div class="prog-bar-track">
+    <div class="prog-bar-fill" id="prog-fill" style="width:0%"></div>
+  </div>
+</div>
+
+<!-- INPUT -->
+<div class="completed-input-row">
+  <label for="completedInput">Completed ($)</label>
+  <input type="number" id="completedInput" placeholder="e.g. 36291850" value="36291850" min="0" step="1" />
+  <span class="hint">← only editable field — all values recalculate automatically</span>
+</div>
+
+<!-- TABLE 1: Individual deliveries -->
+<div class="section-title"><span>01</span> — Individual Delivery Types</div>
+<div class="table-wrap">
+  <table id="table-individual">
+    <thead>
+      <tr>
+        <th>Delivery Type</th>
+        <th>Full Value ($)</th>
+        <th>Hours to Fill</th>
+        <th>Days to Fill</th>
+        <th>Value / Day ($)</th>
+        <th>Value / Hour ($)</th>
+        <th>Deliveries Until Obj.</th>
+        <th>Deliveries × Hours</th>
+        <th>In Days</th>
+        <th>% / Delivery</th>
+      </tr>
+    </thead>
+    <tbody id="tbody-individual"></tbody>
+  </table>
+</div>
+
+<!-- TABLE 2: Combos -->
+<div class="section-title"><span>02</span> — Combination Strategies</div>
+<div class="table-wrap">
+  <table id="table-combos">
+    <thead>
+      <tr>
+        <th>Combination</th>
+        <th>Full Value ($)</th>
+        <th>Hours to Fill</th>
+        <th>Deliveries Until Obj.</th>
+        <th>Deliveries × Hours</th>
+        <th>In Days</th>
+      </tr>
+    </thead>
+    <tbody id="tbody-combos"></tbody>
+  </table>
+</div>
+
+<footer>All values recalculate live based on the Completed field above.</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // ── Constants ──────────────────────────────────────────────────────────────
+  const OBJECTIVE = 50_000_000;
+
+  // Individual delivery types: [name, fullValue, hoursToFill]
+  const DELIVERIES = [
+    ['Cargo & Shipments',       500_000, 2 + 26/60 + 0/3600],   // 2:26:00 → actually from spreadsheet: 500000/8571.428571 = 58.33 hours? Let me use exact values
+    ['Sporting Goods',          500_000, 2 + 46/60 + 40/3600],  
+    ['South American Imports',  270_000, 20/24 * 24 / 24],       
+    ['Pharmaceutical Research', 229_500, 20/24 * 24 / 24],       
+    ['Cash Creation',           189_000, 20/24 * 24 / 24],       
+  ];
+
+  // Recalculate exact hours from value/hour column in spreadsheet:
+  // C&S: value/hour=8571.428571 → hours = 500000/8571.428571 = 58.333... / 24 = 2.4305... days
+  // SG: value/hour=7500 → hours = 500000/7500 = 66.666... / 24 = 2.7777... days
+  // SAI: value/hour=13500 → hours = 270000/13500 = 20 / 24 = 0.8333... days
+  // PR: value/hour=11475 → hours = 229500/11475 = 20 / 24 = 0.8333... days
+  // CC: value/hour=9450 → hours = 189000/9450 = 20 / 24 = 0.8333... days
+  // OP: value/hour=6075 → hours = 162000/6075 = 26.666... / 24 = 1.1111... days
+  // P&C: value/hour=5400 → hours = 81000/5400 = 15 / 24 = 0.625 days
+
+  const DELIVERY_TYPES = [
+    { name: 'Cargo & Shipments',       value: 500_000, hours: 500_000 / 8571.428571 },
+    { name: 'Sporting Goods',          value: 500_000, hours: 500_000 / 7500 },
+    { name: 'South American Imports',  value: 270_000, hours: 270_000 / 13500 },
+    { name: 'Pharmaceutical Research', value: 229_500, hours: 229_500 / 11475 },
+    { name: 'Cash Creation',           value: 189_000, hours: 189_000 / 9450 },
+    { name: 'Organic Produce',         value: 162_000, hours: 162_000 / 6075 },
+    { name: 'Printing & Copying',      value:  81_000, hours:  81_000 / 5400 },
+  ];
+
+  // Combos: [name, totalValue, hoursToFill]
+  // From spreadsheet:
+  // C&S + SG: 1,000,000 value, hours = SG hours (longest = 66.666...)
+  // SAI + PR + CC: 688,500 value, hours = 20 (each is 20h)
+  // SAI + PR + CC x3: 2,065,500 value, hours = 60
+  // Possible in 66:40: 3,065,500 value, hours = SG hours (66.666...)
+  // OP + P&C: 243,000 value, hours = OP hours (longest = 26.666...)
+  // OP + P&C x3: 729,000 value, hours = 80
+
+  const COMBOS = [
+    { name: 'C&S + SG',          value: 1_000_000, hours: 500_000 / 7500 },
+    { name: 'SAI + PR + CC',     value:   688_500, hours: 20 },
+    { name: 'SAI + PR + CC × 3', value: 2_065_500, hours: 60 },
+    { name: 'Possible in 66:40', value: 3_065_500, hours: 500_000 / 7500, highlight: true },
+    { name: 'OP + P&C',          value:   243_000, hours: 162_000 / 6075 },
+    { name: 'OP + P&C × 3',      value:   729_000, hours: (162_000 / 6075) * 3 },
+  ];
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const fmt  = n => '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  const fmtn = n => n.toLocaleString('en-US', { maximumFractionDigits: 4 });
+  const fmtH = h => {
+    const days = Math.floor(h / 24);
+    const hrs  = Math.floor(h % 24);
+    const mins = Math.round((h % 1) * 60) % 60 || Math.round(((h % 24) % 1) * 60);
+    // simpler: just show raw hours
+    const totalH = Math.floor(h);
+    const m = Math.round((h - totalH) * 60);
+    return `${totalH}h ${m.toString().padStart(2,'0')}m`;
+  };
+  const fmtPct = n => (n * 100).toFixed(4) + '%';
+  const fmtDays = n => n.toFixed(3) + ' d';
+
+  function calcRow(delivery, remaining) {
+    const { value, hours } = delivery;
+    const days        = hours / 24;
+    const valuePerDay = value / days;
+    const valuePerHr  = value / hours;
+    const delivsUntil = remaining / value;
+    const delivsXHrs  = delivsUntil * hours;
+    const inDays      = delivsUntil * days;
+    const pctPerDel   = value / OBJECTIVE;
+    return { days, valuePerDay, valuePerHr, delivsUntil, delivsXHrs, inDays, pctPerDel };
+  }
+
+  function calcCombo(combo, remaining) {
+    const { value, hours } = combo;
+    const delivsUntil = remaining / value;
+    const delivsXHrs  = delivsUntil * hours;
+    const inDays      = delivsXHrs / 24;
+    return { delivsUntil, delivsXHrs, inDays };
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function render(completed) {
+    const remaining = Math.max(0, OBJECTIVE - completed);
+    const pct = Math.min(1, completed / OBJECTIVE);
+
+    // Objective strip
+    document.getElementById('disp-completed').textContent = fmt(completed);
+    document.getElementById('disp-remaining').textContent = fmt(remaining);
+    document.getElementById('disp-pct').textContent = (pct * 100).toFixed(2) + '%';
+
+    // Progress bar
+    document.getElementById('prog-fill').style.width = (pct * 100) + '%';
+    document.getElementById('prog-label').textContent = (pct * 100).toFixed(2) + '%';
+
+    // Table 1
+    const tbody1 = document.getElementById('tbody-individual');
+    tbody1.innerHTML = '';
+    DELIVERY_TYPES.forEach(d => {
+      const r = calcRow(d, remaining);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${d.name}</td>
+        <td class="num">${fmt(d.value)}</td>
+        <td class="num dim">${fmtH(d.hours)}</td>
+        <td class="num dim">${r.days.toFixed(4)}</td>
+        <td class="num">${fmt(r.valuePerDay)}</td>
+        <td class="num">${fmt(r.valuePerHr)}</td>
+        <td class="num days-val">${r.delivsUntil.toFixed(4)}</td>
+        <td class="num days-val">${r.delivsXHrs.toFixed(4)}</td>
+        <td class="num days-val">${r.inDays.toFixed(4)}</td>
+        <td class="num pct">${fmtPct(r.pctPerDel)}</td>
+      `;
+      tbody1.appendChild(tr);
+    });
+
+    // Table 2
+    const tbody2 = document.getElementById('tbody-combos');
+    tbody2.innerHTML = '';
+    COMBOS.forEach(c => {
+      const r = calcCombo(c, remaining);
+      const tr = document.createElement('tr');
+      tr.className = c.highlight ? 'highlight-row' : 'combo-row';
+      tr.innerHTML = `
+        <td>${c.name}</td>
+        <td class="num">${fmt(c.value)}</td>
+        <td class="num dim">${fmtH(c.hours)}</td>
+        <td class="num days-val">${r.delivsUntil.toFixed(4)}</td>
+        <td class="num days-val">${r.delivsXHrs.toFixed(4)}</td>
+        <td class="num days-val">${r.inDays.toFixed(4)}</td>
+      `;
+      tbody2.appendChild(tr);
+    });
+  }
+
+  // ── Event ──────────────────────────────────────────────────────────────────
+  const input = document.getElementById('completedInput');
+  input.addEventListener('input', () => {
+    const val = parseFloat(input.value) || 0;
+    render(val);
+  });
+
+  // Initial render
+  render(parseFloat(input.value) || 0);
+</script>
+</body>
+</html>
